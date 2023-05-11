@@ -27,5 +27,5 @@ courses = ['AP Physics C Mechanics', 'AP Calculus AB', 'Food Studies 12']
 for class in courses:
   print(f' I\'m failing {class}')
 ```
-![crazyAmounts](https://media.tenor.com/Mglko36jTRoAAAAM/gato-pro.gif)
+
 ![soChill](https://i.pinimg.com/originals/60/dd/8e/60dd8e0ea32d69081d4b803b848823d3.gif)
