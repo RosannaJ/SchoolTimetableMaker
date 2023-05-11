@@ -11,6 +11,7 @@ npm install schooltimetablemaker.exe
 Only accessible to those a part of Swifty Summer
 
 ## Implementation Example
+The following code determines how smart you are using ChatGPT 6.5
 ```py
 import League of Legends
 import GreasyNicky
