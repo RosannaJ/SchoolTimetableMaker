@@ -1,7 +1,7 @@
 # SchoolTimetableMaker
 SchoolTimetableMaker is a Python application used for generating schoolwide timetables.
 
-# Installation
+## Installation
 Message L9ANGIE on League of Legends for access to the application
 ```python
 import League of Legends
