@@ -11,7 +11,7 @@ npm install schooltimetablemaker.exe
 Only accessible to those a part of Swifty Summer
 
 ## Implementation Example
-```python
+```js
 import League of Legends
 import GreasyNicky
 
