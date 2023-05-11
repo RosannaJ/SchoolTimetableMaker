@@ -28,4 +28,4 @@ for class in courses:
   print(f' I\'m failing {class}')
 ```
 ![crazyAmounts](https://media.tenor.com/Mglko36jTRoAAAAM/gato-pro.gif)
-
+![sochill](https://gifdb.com/images/high/thanks-for-watching-from-greatful-guy-jpx71boi56lrt8ih.gif)
