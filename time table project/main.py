@@ -1,5 +1,5 @@
 import csv
-
+print("PENIS")
 #Person Class
 class Person:
     def __init__ (self, id, courses, alts):
