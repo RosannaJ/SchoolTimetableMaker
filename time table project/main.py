@@ -22,6 +22,7 @@ class Person:
     
     def getAlts(self):
         return self.alts
+
 #Course Class   
 class Course:
     def __init__(self, classID, name, baseTermsPerYear , coveredTermsPerYear, maxEnrollment, PPC, sections):
@@ -38,6 +39,9 @@ class Course:
     
     def __repr__(self):
         return self.__str__()
+    
+    def getMaxEnroll(self):
+        return self.maxEnrollment
 
 class Timetable:
     def __init__(self):
@@ -45,6 +49,12 @@ class Timetable:
         
     def addCourse(self, course):
         self.assignedCourses.append(course)
+
+class Block:
+    def __init__(self, course):
+        self.courses = course #this stores the course object
+        self.maxEnrollment = Course.getMaxEnroll(course[0])
+        self.studentList = []
 
 #Main   
 people = []
@@ -54,6 +64,9 @@ altCourses = []
 id = 0
 first = True
 
+
+
+globalTimetable = [[], [], [], [], [], [], [], []] #indexes 0 - 7 represent all 8 blocks in both semesters
     
 with open('data/requests.csv') as csv_file:
     csv_reader = csv.reader(csv_file)
@@ -85,5 +98,13 @@ with open('data/Course Information.csv') as file:
         if (row[0] != "" and row [1] != ""):
             newCourse = Course(row[0], row[2], row[7], row[8], row[9], row[10], row[14])
             classes.append(newCourse)
-        
+
+with open("data/Course Blocking Rules.csv") as file:
+    csv_reader = csv.reader(file)
+    for row in csv_reader:
+        if(row[1] == "Course Blocking"):
+            if(row[2]):
+                print(0)
+
 print(classes)
+
