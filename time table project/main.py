@@ -94,17 +94,31 @@ with open('data/requests.csv') as csv_file:
 with open('data/Course Information.csv') as file:
     csv_reader = csv.reader(file)
     for row in csv_reader:
-        print(row)
+        #print(row)
         if (row[0] != "" and row [1] != ""):
             newCourse = Course(row[0], row[2], row[7], row[8], row[9], row[10], row[14])
             classes.append(newCourse)
 
+
+courseBlocking = []
+
 with open("data/Course Blocking Rules.csv") as file:
     csv_reader = csv.reader(file)
     for row in csv_reader:
-        if(row[1] == "Course Blocking"):
-            if(row[2]):
-                print(0)
+        if(row[1] == "Course - Blocking"):
+            string = row[2].split(",")
+            temp = []
+            for i in len(string):
+                if(i == 0):
+                    temp.append(string[i].split(" ")[1])
+                elif(i == len(string) - 1):
+                    temp.append(string[i].split(" ")[0])
+                else:
+                    temp.append[i]
+            courseBlocking.append(temp)
 
-print(classes)
+for i in courseBlocking:
+    print(i)
+
+#print(classes)
 
