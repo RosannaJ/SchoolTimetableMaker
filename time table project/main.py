@@ -1,4 +1,6 @@
 import csv
+import os
+import copy
 
 #Person Class
 class Person:
@@ -9,11 +11,22 @@ class Person:
         self.timetable = Timetable()
 
     def __str__(self):
-        return f'\n>>>>>>>>>>>>>\nID is {self.id} \n {self.courses} \n {self.alts} \n>>>>>>>>>>>>>\n'
+        return f'\n>>>>>>>>>>>>>\nID is {self.id}' #\n {self.courses} \n {self.alts} \n>>>>>>>>>>>>>\n'
     
     def __repr__(self):
         return self.__str__()
     
+    
+    def getID(self):
+        return self.id
+    
+    def getCourses(self):
+        return self.courses
+    
+    def getAlts(self):
+        return self.alts
+
+
     def getID(self):
         return self.id
     
@@ -25,7 +38,7 @@ class Person:
 
 #Course Class   
 class Course:
-    def __init__(self, classID, name, baseTermsPerYear , coveredTermsPerYear, maxEnrollment, PPC, sections):
+    def __init__(self, classID, name, baseTermsPerYear, coveredTermsPerYear, maxEnrollment, PPC, sections):
         self.classID = classID
         self.name = name
         self.baseTermsPerYear = baseTermsPerYear
@@ -42,19 +55,28 @@ class Course:
     
     def getMaxEnroll(self):
         return self.maxEnrollment
-
+    
+    def getClassID(self):
+        return self.classID
+            
+#Timetable Class
 class Timetable:
     def __init__(self):
         self.assignedCourses = []
         
+        
     def addCourse(self, course):
         self.assignedCourses.append(course)
 
+#Block Class
 class Block:
     def __init__(self, course):
         self.courses = course #this stores the course object
-        self.maxEnrollment = Course.getMaxEnroll(course[0])
+        self.maxEnrollment = self.courses[0].maxEnrollment
         self.studentList = []
+
+    def __repr__(self):
+        return f'\n\nCourses in block: {self.courses}\n Students in: {self.studentList}'# Max enrollment: {self.maxEnrollment} \n Students: {self.studentList}'
 
 #Main   
 people = []
@@ -64,10 +86,31 @@ altCourses = []
 id = 0
 first = True
 
+allBlocks = []
 
+##stores sequecning
+sequencing = {}
 
 globalTimetable = [[], [], [], [], [], [], [], []] #indexes 0 - 7 represent all 8 blocks in both semesters
-    
+
+#Methods
+def getCourse(courseID):
+    for course in classes:
+        if(course.classID == courseID):
+            return course
+
+#Main
+
+#Fills the classes array with each class
+with open('data/Course Information.csv') as file:
+    csv_reader = csv.reader(file)
+    for row in csv_reader:
+        if (row[0] != "" and row [2] != ""):
+            #print(row)
+            newCourse = Course(row[0], row[2], row[7], row[8], row[9], row[10], row[14])
+            classes.append(newCourse)
+
+#Fills the people array with student objects containing course requests
 with open('data/requests.csv') as csv_file:
     csv_reader = csv.reader(csv_file)
     for row in csv_reader:
@@ -88,37 +131,97 @@ with open('data/requests.csv') as csv_file:
             people.append(person)
             
         elif (row[11] == "Y"):
-            altCourses.append(row[0])
-        else: tempCourses.append(row[0])
+            altCourses.append(getCourse(row[0]))
+        else: tempCourses.append(getCourse(row[0]))
 
-with open('data/Course Information.csv') as file:
-    csv_reader = csv.reader(file)
-    for row in csv_reader:
-        #print(row)
-        if (row[0] != "" and row [1] != ""):
-            newCourse = Course(row[0], row[2], row[7], row[8], row[9], row[10], row[14])
-            classes.append(newCourse)
+courseBlocking = [] 
 
-
-courseBlocking = []
-
-with open("data/Course Blocking Rules.csv") as file:
+#Fills the courseBlocking array with arrays of course objects that are blocked together
+#Removes those courses from the original classes array
+with open('data/Course Blocking Rules.csv') as file:
     csv_reader = csv.reader(file)
     for row in csv_reader:
         if(row[1] == "Course - Blocking"):
             string = row[2].split(",")
             temp = []
-            for i in len(string):
-                if(i == 0):
-                    temp.append(string[i].split(" ")[1])
-                elif(i == len(string) - 1):
-                    temp.append(string[i].split(" ")[0])
-                else:
-                    temp.append[i]
+            for i in range(len(string)):
+                temp.append(getCourse(string[i].split(" ")[1]))
+                    
             courseBlocking.append(temp)
 
-for i in courseBlocking:
-    print(i)
-
 #print(classes)
+
+for course in classes:
+    tempList = []
+    tempList.append(course)
+    tempBlock = Block(tempList)
+    allBlocks.append(tempBlock)
+    
+for course in courseBlocking:
+    tempBlock = Block(course)
+    allBlocks.append(tempBlock)
+
+# process sequencing run
+with open('data/Course Sequencing Rules.csv') as file:
+    csv_reader = csv.reader(file)
+    for row in csv_reader:
+         if(row[1] == "Course - Sequencing"):
+            string = row[2].split(" ")
+            tempKey = getCourse(string[1])
+            tempValues = []
+
+            for i in range(3, len(string)):
+                tempStr = string[i].replace(",", "")
+                tempValues.append(getCourse(tempStr))
+
+            sequencing.update({tempKey: tempValues})
+
+#print(allBlocks)
+
+currBlock = 0
+
+blockFound = False
+    
+for p in people:
+    for wantedCourse in p.courses:
+        for period in globalTimetable:
+
+            for block in period:
+                if wantedCourse in block.courses:
+                    #add course to persons timetable
+                    #add person to block
+                    if (len(block.studentList) < int(block.maxEnrollment)):
+                        block.studentList.append(p)
+                        blockFound = True
+                        
+                    else:
+                        newBlock = Block(block.courses)
+                        newBlock.studentList.append(p)
+                        globalTimetable[currBlock].append(newBlock)
+                        currBlock = currBlock + 1
+                        if(currBlock == 8):
+                            currBlock = 0
+                        blockFound = True
+                    break
+            if(blockFound):
+                break
+            
+        if(not blockFound):
+            tempBlockCourses = [wantedCourse]
+            for blocking in courseBlocking:
+                if wantedCourse in blocking:
+                    tempBlockCourses = blocking
+                    break
+            newBlock = Block(tempBlockCourses)
+            newBlock.studentList.append(p)
+            globalTimetable[currBlock].append(newBlock)
+            currBlock = currBlock + 1
+            if(currBlock == 8):
+                     currBlock = 0
+    
+    
+print(globalTimetable)
+                        
+            
+
 
