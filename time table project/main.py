@@ -1,3 +1,5 @@
+# EFP WRITING 10 is fried
+
 import csv
 import os
 import copy
@@ -11,7 +13,7 @@ class Person:
         self.timetable = Timetable()
 
     def __str__(self):
-        return f'\n>>>>>>>>>>>>>\nID is {self.id}' #\n {self.courses} \n {self.alts} \n>>>>>>>>>>>>>\n'
+        return f'\n>>>>>>>>>>>>>\nID is {self.id} \n {self.courses} \n {self.alts} \n>>>>>>>>>>>>>\n'
     
     def __repr__(self):
         return self.__str__()
@@ -48,7 +50,7 @@ class Course:
         self.sections = sections
     
     def __str__(self):
-        return f'\n>>>>>>>>>>>>>\n{self.classID}: {self.name} \n{self.baseTermsPerYear}, {self.coveredTermsPerYear} \n{self.maxEnrollment}, {self.PPC}, {self.sections} \n>>>>>>>>>>>>>\n'
+        return f'\n>>>>>>>>>>>>>\n{self.classID}: {self.name} \n Max: {self.maxEnrollment}\n>>>>>>>>>>>>>\n'
     
     def __repr__(self):
         return self.__str__()
@@ -99,6 +101,23 @@ def getCourse(courseID):
         if(course.classID == courseID):
             return course
 
+def printGlobalTimetable(): #prints the classes in each block (without printing students)
+    x = 0
+    for period in globalTimetable:
+        print()
+        print("PERIOD: ", end="")
+        print(x)
+        print()
+
+        x = x + 1
+        for block in period:
+            for course in block.courses:
+                print(course.classID, end=" ")
+            print(":", end=" ")
+            for student in block.studentList:
+                print(student.id, end=",")
+            print()
+
 #Main
 
 #Fills the classes array with each class
@@ -131,8 +150,13 @@ with open('data/requests.csv') as csv_file:
             people.append(person)
             
         elif (row[11] == "Y"):
+            # if (getCourse(row[0]) == None): #temp
+            #     print(row[0])
             altCourses.append(getCourse(row[0]))
-        else: tempCourses.append(getCourse(row[0]))
+        else: 
+            # if (getCourse(row[0]) == None):
+            #     print(row[0])
+            tempCourses.append(getCourse(row[0]))
 
 courseBlocking = [] 
 
@@ -179,49 +203,90 @@ with open('data/Course Sequencing Rules.csv') as file:
 #print(allBlocks)
 
 currBlock = 0
-
 blockFound = False
+availableClasses = [] # stores classes that are not at max capacity
     
+temp = 0
+
+
 for p in people:
-    for wantedCourse in p.courses:
+    #print(p.id)
+
+    for wantedCourse in p.courses: # breaks out of this loop if block found
+        #print("requesting: ", end="")
+        #print(wantedCourse.classID, end=" ")
+        blockFound = False
         for period in globalTimetable:
 
             for block in period:
                 if wantedCourse in block.courses:
-                    #add course to persons timetable
-                    #add person to block
-                    if (len(block.studentList) < int(block.maxEnrollment)):
+                    if block not in availableClasses:
+                        continue
+                        
+                    #if the requested class is found and not at max capacity, add student
+                    if (len(block.studentList) < int(block.maxEnrollment)): #TODO: it only checks the first block that is at max capacity so it will keep making new courses once one reaches max
                         block.studentList.append(p)
                         blockFound = True
-                        
+                        #print("found block ")
+                        break
+
+                    # remove the block from availableClasses if at max capacity
                     else:
-                        newBlock = Block(block.courses)
-                        newBlock.studentList.append(p)
-                        globalTimetable[currBlock].append(newBlock)
-                        currBlock = currBlock + 1
-                        if(currBlock == 8):
-                            currBlock = 0
-                        blockFound = True
-                    break
+                        availableClasses.remove(block)
+                    #     newBlock = Block(block.courses)
+                    #     newBlock.studentList.append(p)
+                    #     globalTimetable[currBlock].append(newBlock)
+                    #     currBlock = currBlock + 1
+                    #     if(currBlock == 8):
+                    #         currBlock = 0
+                    #     blockFound = True
+                    # break
             if(blockFound):
                 break
-            
+        
+        #if there is no course that the student wants in the schedule, make new course
         if(not blockFound):
+            #print("creating new block")
             tempBlockCourses = [wantedCourse]
             for blocking in courseBlocking:
                 if wantedCourse in blocking:
                     tempBlockCourses = blocking
                     break
-            newBlock = Block(tempBlockCourses)
+            newBlock = Block(tempBlockCourses) ##probably empty cell
             newBlock.studentList.append(p)
             globalTimetable[currBlock].append(newBlock)
+            availableClasses.append(newBlock)
             currBlock = currBlock + 1
             if(currBlock == 8):
                      currBlock = 0
+    #print()
+
+    # TODO: temp
+    # temp = temp + 1
+    # if temp > 5:
+    #     break
+
     
     
-print(globalTimetable)
+printGlobalTimetable()
+
+score = 0
+
+# scoring the timetable
+for period in globalTimetable:
+    for block in period:
+        for student in block.studentList:
+            for reqCourse in student.courses:
+                if(reqCourse in block.courses):
+                    score = score + 2
+            for altCourse in student.alts:
+                if(altCourse in block.courses):
+                    score = score + 1
+
+# max scrore around 29000
+# aiming for 23500       
+# print(score)
                         
-            
+
 
 
