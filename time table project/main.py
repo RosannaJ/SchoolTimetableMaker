@@ -80,6 +80,13 @@ class Block:
     def __repr__(self):
         return f'\n\nCourses in block: {self.courses}\n Students in: {self.studentList}'# Max enrollment: {self.maxEnrollment} \n Students: {self.studentList}'
 
+    def __str__(self):
+        txt = ""
+        for course in self.courses:
+            txt += course.classID + " "
+        return txt
+        
+
 #Main   
 people = []
 classes = []
@@ -117,6 +124,48 @@ def printGlobalTimetable(): #prints the classes in each block (without printing 
             for student in block.studentList:
                 print(student.id, end=",")
             print()
+
+def drawLine(x):
+    txt = ""
+    for i in range(x):
+        txt += "-"
+    return txt
+
+def drawTableHeading(semester):
+    txt = drawLine(183) + "\n"
+    txt += "{:^183}|\n".format("Semester" + str(semester))
+    txt += drawLine(183) + "|\n"
+    txt += "{:^45}|{:^45}|{:^45}|{:^45}|\n".format("A", "B", "C", "D")
+    txt += drawLine(183) + "|\n"
+    return txt
+
+def printAllCourses():
+    txt = drawTableHeading(1)
+    fullestBlock = 0 # TODO: replace placeholder 0
+    for row in range(len(globalTimetable[fullestBlock])):
+        for x in range(4):
+            if len(globalTimetable[x]) <= row:
+                continue
+            txt += "{:<45}|".format(str(globalTimetable[x][row]))
+        txt += "\n"
+    print(txt)
+
+    txt = drawTableHeading(2)
+    fullestBlock = 0 # TODO: replace placeholder 0
+    for row in range(len(globalTimetable[fullestBlock])):
+        for x in range(4,8):
+            if len(globalTimetable[x]) <= row:
+                continue
+            txt += "{:<45}|".format(str(globalTimetable[x][row]))
+        txt += "\n"
+    print(txt)
+
+def getStudent(id):
+    student = None
+    for person in people:
+        if person.id == id:
+            student = person
+    return student
 
 #Main
 
@@ -210,11 +259,11 @@ temp = 0
 
 
 for p in people:
-    #print(p.id)
+    # print(p.id)
 
     for wantedCourse in p.courses: # breaks out of this loop if block found
-        #print("requesting: ", end="")
-        #print(wantedCourse.classID, end=" ")
+        # print("requesting: ", end="")
+        # print(wantedCourse.classID, end=" ")
         blockFound = False
         for period in globalTimetable:
 
@@ -224,10 +273,10 @@ for p in people:
                         continue
                         
                     #if the requested class is found and not at max capacity, add student
-                    if (len(block.studentList) < int(block.maxEnrollment)): #TODO: it only checks the first block that is at max capacity so it will keep making new courses once one reaches max
+                    if (len(block.studentList) < int(block.maxEnrollment)): 
                         block.studentList.append(p)
                         blockFound = True
-                        #print("found block ")
+                        # print("found block ")
                         break
 
                     # remove the block from availableClasses if at max capacity
@@ -246,7 +295,7 @@ for p in people:
         
         #if there is no course that the student wants in the schedule, make new course
         if(not blockFound):
-            #print("creating new block")
+            # print("creating new block")
             tempBlockCourses = [wantedCourse]
             for blocking in courseBlocking:
                 if wantedCourse in blocking:
@@ -261,14 +310,9 @@ for p in people:
                      currBlock = 0
     #print()
 
-    # TODO: temp
-    # temp = temp + 1
-    # if temp > 5:
-    #     break
-
     
     
-printGlobalTimetable()
+# printGlobalTimetable()
 
 score = 0
 
@@ -288,5 +332,5 @@ for period in globalTimetable:
 # print(score)
                         
 
-
+printAllCourses()
 
