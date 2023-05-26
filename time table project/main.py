@@ -1,5 +1,3 @@
-# EFP WRITING 10 is fried
-
 import csv
 import os
 import copy
@@ -10,33 +8,13 @@ class Person:
         self.id = id
         self.courses = courses
         self.alts = alts
-        self.timetable = Timetable()
+        self.timetable = [[], [], [], [], [], [], [], [], []]
 
     def __str__(self):
-        return f'\n>>>>>>>>>>>>>\nID is {self.id} \n {self.courses} \n {self.alts} \n>>>>>>>>>>>>>\n'
+        return f'\n{self.id}'
     
     def __repr__(self):
         return self.__str__()
-    
-    
-    def getID(self):
-        return self.id
-    
-    def getCourses(self):
-        return self.courses
-    
-    def getAlts(self):
-        return self.alts
-
-
-    def getID(self):
-        return self.id
-    
-    def getCourses(self):
-        return self.courses
-    
-    def getAlts(self):
-        return self.alts
 
 #Course Class   
 class Course:
@@ -54,21 +32,6 @@ class Course:
     
     def __repr__(self):
         return self.__str__()
-    
-    def getMaxEnroll(self):
-        return self.maxEnrollment
-    
-    def getClassID(self):
-        return self.classID
-            
-#Timetable Class
-class Timetable:
-    def __init__(self):
-        self.assignedCourses = []
-        
-        
-    def addCourse(self, course):
-        self.assignedCourses.append(course)
 
 #Block Class
 class Block:
@@ -76,6 +39,7 @@ class Block:
         self.courses = course #this stores the course object
         self.maxEnrollment = self.courses[0].maxEnrollment
         self.studentList = []
+        # self.sections
 
     def __repr__(self):
         return f'\n\nCourses in block: {self.courses}\n Students in: {self.studentList}'# Max enrollment: {self.maxEnrollment} \n Students: {self.studentList}'
@@ -100,7 +64,7 @@ allBlocks = []
 ##stores sequecning
 sequencing = {}
 
-globalTimetable = [[], [], [], [], [], [], [], []] #indexes 0 - 7 represent all 8 blocks in both semesters
+globalTimetable = [[], [], [], [], [], [], [], []] #indexes 0 - 7 represent all 8 blocks in both semesters, index 8 is outside timetable
 
 #Methods
 def getCourse(courseID):
@@ -166,6 +130,22 @@ def getStudent(id):
         if person.id == id:
             student = person
     return student
+
+def printStudentTimetable(student):
+    print("Student " + str(student.id) + "'s Timetable:")
+    for i in range(8):
+        for block in student.timetable[i]:
+            semester = 1
+            if(i > 3):
+                semester = 2
+            print("Semester: " + str(semester) + ", Block: " + chr(i % 4 + 65) + "  ", end="")
+            for course in block.courses:
+                print(course.classID, end=" ")
+            print()
+    print("Outside Timetable: ")
+    for block in student.timetable[8]:
+        for course in block.courses:
+            print(course.classID, end=" ")
 
 #Main
 
@@ -271,12 +251,20 @@ for p in people:
                 if wantedCourse in block.courses:
                     if block not in availableClasses:
                         continue
+
+                    
                         
                     #if the requested class is found and not at max capacity, add student
-                    if (len(block.studentList) < int(block.maxEnrollment)): 
+                    if (len(block.studentList) < int(block.maxEnrollment) and len(p.timetable[currBlock]) == 0): 
+                        
+
                         block.studentList.append(p)
+                        p.timetable[currBlock].append(block)
                         blockFound = True
                         # print("found block ")
+                        currBlock = currBlock + 1
+                        if(currBlock == 8):
+                            currBlock = 0
                         break
 
                     # remove the block from availableClasses if at max capacity
@@ -301,8 +289,9 @@ for p in people:
                 if wantedCourse in blocking:
                     tempBlockCourses = blocking
                     break
-            newBlock = Block(tempBlockCourses) ##probably empty cell
+            newBlock = Block(tempBlockCourses)
             newBlock.studentList.append(p)
+            p.timetable[currBlock].append(newBlock)
             globalTimetable[currBlock].append(newBlock)
             availableClasses.append(newBlock)
             currBlock = currBlock + 1
@@ -317,20 +306,17 @@ for p in people:
 score = 0
 
 # scoring the timetable
-for period in globalTimetable:
-    for block in period:
-        for student in block.studentList:
-            for reqCourse in student.courses:
-                if(reqCourse in block.courses):
+for student in people:
+    for period in student.timetable:
+        for block in period:
+            for course in student.courses:
+                if (course in block.courses):
                     score = score + 2
-            for altCourse in student.alts:
-                if(altCourse in block.courses):
-                    score = score + 1
-
-# max scrore around 29000
-# aiming for 23500       
-# print(score)
-                        
+            for course in student.alts:
+                if (course in block.courses):
+                    score = score + 1           
 
 printAllCourses()
-
+print("Score: " + str(score))
+print()
+printStudentTimetable(getStudent("1278"))
