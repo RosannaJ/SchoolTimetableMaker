@@ -1,11 +1,13 @@
 import csv
+import random
 
 #Person Class
 class Person:
-    def __init__ (self, id, courses, alts):
+    def __init__ (self, id, courses, alts, outsides):
         self.id = id
         self.courses = courses
         self.alts = alts
+        self.outsides = outsides
         self.timetable = [[], [], [], [], [], [], [], [], []]
 
     def __str__(self):
@@ -23,7 +25,9 @@ class Course:
         self.coveredTermsPerYear = coveredTermsPerYear
         self.maxEnrollment = maxEnrollment
         self.PPC = PPC
-        self.sections = sections
+        self.maxSections = int(sections)
+        self.outsideTimetable = False
+        self.sections = 0
     
     def __str__(self):
         return f'\n>>>>>>>>>>>>>\n{self.classID}: {self.name} \n Max: {self.maxEnrollment}\n>>>>>>>>>>>>>\n'
@@ -54,6 +58,7 @@ people = []
 classes = []
 tempCourses = []
 altCourses = []
+outsides = []
 id = 0
 first = True
 
@@ -62,7 +67,27 @@ allBlocks = []
 ##stores sequecning
 sequencing = {}
 
-globalTimetable = [[], [], [], [], [], [], [], []] #indexes 0 - 7 represent all 8 blocks in both semesters, index 8 is outside timetable
+globalTimetable = [[], [], [], [], [], [], [], [], []] #indexes 0 - 7 represent all 8 blocks in both semesters, index 8 is outside timetable
+availableClasses = [] # stores classes that are not at max capacity
+
+score = 0
+reqCourseScore = 0
+maxReqCourseScore = 0
+altCourseScore = 0
+maxAltCourseScore = 0
+numReqTimetable = 0         # students with 8/8 requested courses
+numReqAltTimetable = 0      # students with 8/8 requested or alt courses
+
+
+outside_the_timetable = [
+    'XC---09--L', 'MDNC-09C-L', 'MDNC-09M-L', 'XBA--09J-L', 'XLDCB09S-L', 'YCPA-0AX-L',
+    'MDNCM10--L', 'YED--0BX-L', 'MMUCC10--L', 'YCPA-0AXE-', 'MMUOR10S-L', 'MDNC-10--L',
+    'MIDS-0C---', 'MMUJB10--L', 'MDNC-11--L', 'YCPA-1AX-L', 'MDNCM11--L', 'YCPA-1AXE-',
+    'MGRPR11--L', 'MGMT-12L--', 'YED--1EX-L', 'MWEX-2A--L', 'MCMCC11--L', 'MWEX-2B--L',
+    'MIMJB11--L', 'MMUOR11S-L', 'MDNC-12--L', 'YCPA-2AX-L', 'MDNCM12--L', 'YCPA-2AXE-',
+    'MGRPR12--L', 'MGMT-12L--', 'YED--2DX-L', 'YED--2FX-L', 'MCMCC12--L', 'MWEX-2A--L',
+    'MIMJB12--L', 'MWEX-2B--L', 'MMUOR12S-'
+]
 
 #Methods
 def getCourse(courseID):
@@ -106,7 +131,7 @@ def writeToCSV():
         # loop through each row of the table
         for row in range(len(globalTimetable[fullestBlock])):
             # loop through blocks (A to D in each semester)
-            for x in range(8):
+            for x in range(9):
                 # skip column if no more courses in this block
                 if len(globalTimetable[x]) <= row:
                     txt.append("")
@@ -170,19 +195,29 @@ def getStudent(id):
 def printStudentTimetable(student):
     print("Student " + str(student.id) + "'s Timetable:")
     for i in range(8):
+        print("Semester: " + str(i // 4 + 1) + ", Block: " + chr(i % 4 + 65), end=" ")
         for block in student.timetable[i]:
-            semester = 1
-            if(i > 3):
-                semester = 2
-            print("Semester: " + str(semester) + ", Block: " + chr(i % 4 + 65) + "  ", end="")
-            for course in block.courses:
-                if (course in student.courses):
-                    print(course.name, end="")
-            print()
-    print("Outside Timetable: ")
+            print(str(block), end="")
+        print()
+    print("Outside Timetable: ", end="")
     for block in student.timetable[8]:
+        print("[", end="")
         for course in block.courses:
             print(course.name, end=", ")
+        print("]" , end="")
+    print()
+    print()
+            
+def scoreTimetable(tempScore):
+    # scoring the timetable
+    for student in people:
+        for block in student.timetable:
+
+            if (len(block) == 0):
+                # print("add to Score")
+                tempScore += 1
+                
+    return tempScore
 
 def getFullestBlock():
     max = 0
@@ -193,6 +228,163 @@ def getFullestBlock():
             max = len(globalTimetable[i])
     return maxIndex
 
+def giveAvailableCourses(requestedCourses, student, currBlock):
+    for wantedCourse in requestedCourses:
+        blockFound = False
+        for currPeriod in range(8):
+
+            # if there's already a course in this period, continue
+            if len(student.timetable[currPeriod]) > 0:
+                continue
+            for block in globalTimetable[currPeriod]:
+                if wantedCourse in block.courses:
+                    
+                    # check if block is at max capacity
+                    if block not in availableClasses:
+                        continue
+
+                    #if the requested class is found and not at max capacity, add student
+                    if (len(block.studentList) + 1 <= int(block.maxEnrollment)): 
+                        
+                        block.studentList.append(student)
+                        student.timetable[currPeriod].append(block)
+                        blockFound = True
+                        break
+
+                    # remove the block from availableClasses if at max capacity
+                    else:
+                        availableClasses.remove(block)
+            if(blockFound):
+                break
+        
+        #if there is no course that the student wants in the schedule, make new course
+        if(not blockFound):
+            tempBlockCourses = [wantedCourse]
+            for blocking in courseBlocking:
+                if wantedCourse in blocking:
+                    tempBlockCourses = blocking
+                    break
+
+            # if max sections reached, break
+            if tempBlockCourses[0].sections >= tempBlockCourses[0].maxSections:
+                break
+
+            # update number of sections for each course in block
+            for course in tempBlockCourses:
+                course.sections = course.sections + 1
+
+            newBlock = Block(tempBlockCourses)
+            newBlock.studentList.append(student)
+            student.timetable[currBlock].append(newBlock)
+            globalTimetable[currBlock].append(newBlock)
+            availableClasses.append(newBlock)
+            currBlock = currBlock + 1
+            if(currBlock == 8):
+                currBlock = 0
+    return currBlock # TODO: temp
+
+def giveAltCourses(altCourses, student):
+    for period in range(8):
+        foundCourse = False
+        
+        # if there is already a course in this period, continue
+        if len(student.timetable[period]) > 0:
+            continue
+
+        # loop through alt requests
+        for course in altCourses:
+            for block in globalTimetable[period]:
+                
+                # checks if max enrolment reached
+                if (block not in availableClasses):
+                    continue
+
+                # check if wanted course found
+                if (course in block.courses):
+                    student.timetable[period].append(block)
+                    block.studentList.append(student)
+                    altCourses.remove(course)
+                    foundCourse = True
+                    break
+                
+            if(foundCourse):
+                break
+
+    availableBlocks = [0, 1, 2, 3, 4, 5, 6, 7]
+
+    while (len(altCourses) > 0 and len(availableBlocks) > 0):
+        rand = random.randint(0, len(availableBlocks)-1)
+        # if there is already a course in this period, continue
+        if len(student.timetable[availableBlocks[rand]]) > 0:
+            availableBlocks.remove(availableBlocks[rand])
+            continue   
+        
+        #print(str(rand))  
+        tempBlockCourses = [altCourses[0]]
+        for blocking in courseBlocking:
+            if altCourses[0] in blocking:
+                tempBlockCourses = blocking
+                break
+        
+        # if max sections reached, break
+        if tempBlockCourses[0].sections >= tempBlockCourses[0].maxSections:
+            altCourses.remove(altCourses[0])
+            continue
+
+        # update number of sections for each course in block
+        for course in tempBlockCourses:
+            course.sections = course.sections + 1
+
+        newBlock = Block(tempBlockCourses)
+        newBlock.studentList.append(student)
+        student.timetable[rand].append(newBlock)
+        globalTimetable[rand].append(newBlock)
+        availableClasses.append(newBlock)
+        altCourses.remove(altCourses[0])
+        #availableBlocks.remove(availableBlocks[rand])
+
+def giveOutsideCourses(outsides, student):
+    
+    for wantedCourse in outsides:
+        courseFound = False        
+        for block in globalTimetable[8]:
+            if wantedCourse in block.courses:
+                
+                # check if block is at max capacity
+                if block not in availableClasses:
+                    continue
+
+                #if the requested class is found and not at max capacity, add student
+                if (len(block.studentList) + 1 <= int(block.maxEnrollment)): 
+                    block.studentList.append(student)
+                    student.timetable[8].append(block)
+                    courseFound = True
+                    break
+
+                # remove the block from availableClasses if at max capacity
+                else:
+                    availableClasses.remove(block)
+
+        if not courseFound:
+            tempBlockCourses = [wantedCourse]
+            for blocking in courseBlocking:
+                if wantedCourse in blocking:
+                    tempBlockCourses = blocking
+                    break
+
+            # if max sections reached, break
+            if tempBlockCourses[0].sections >= tempBlockCourses[0].maxSections:
+                break
+
+            # update number of sections for each course in block
+            for course in tempBlockCourses:
+                course.sections = course.sections + 1
+
+            newBlock = Block(tempBlockCourses)
+            newBlock.studentList.append(student)
+            student.timetable[8].append(newBlock)
+            globalTimetable[8].append(newBlock)
+            availableClasses.append(newBlock)
 
 #Main
 
@@ -202,7 +394,16 @@ with open('data/Course Information.csv') as file:
     for row in csv_reader:
         if (row[0] != "" and row [2] != ""):
             newCourse = Course(row[0], row[2], row[7], row[8], row[9], row[10], row[14])
+            if(newCourse.classID in outside_the_timetable):
+                newCourse.outsideTimetable = True
             classes.append(newCourse)
+            
+
+
+for course in classes:
+    if course.classID in outside_the_timetable:
+        course.outsideTimetable = True
+    
 
 #Fills the people array with student objects containing course requests
 with open('data/requests.csv') as csv_file:
@@ -216,12 +417,15 @@ with open('data/requests.csv') as csv_file:
         if (row[0] == "Course"):
             continue
         if (row[0] == "ID"):
-            person = Person(id, tempCourses, altCourses)
+            person = Person(id, tempCourses, altCourses, outsides)
             id = row[1]
             tempCourses = []
             altCourses = []
+            outsides = []
             people.append(person)
             
+        elif getCourse(row[0]).outsideTimetable:
+            outsides.append(getCourse(row[0]))
         elif (row[11] == "Y"):
             altCourses.append(getCourse(row[0]))
         else: 
@@ -256,7 +460,7 @@ for course in courseBlocking:
 with open('data/Course Sequencing Rules.csv') as file:
     csv_reader = csv.reader(file)
     for row in csv_reader:
-         if(row[1] == "Course - Sequencing"):
+        if(row[1] == "Course - Sequencing"):
             string = row[2].split(" ")
             tempKey = getCourse(string[1])
             tempValues = []
@@ -268,84 +472,70 @@ with open('data/Course Sequencing Rules.csv') as file:
             sequencing.update({tempKey: tempValues})
 
 currBlock = 0
-blockFound = False
-availableClasses = [] # stores classes that are not at max capacity
-    
-temp = 0
 
+# random.shuffle(people)
+for p in people:
+    currBlock = giveAvailableCourses(p.courses, p, currBlock)
+    
 
 for p in people:
-    # print(p.id)
 
-    for wantedCourse in p.courses: # breaks out of this loop if block found
-        # print("requesting: ", end="")
-        # print(wantedCourse.classID, end=" ")
-        blockFound = False
-        for period in globalTimetable:
+    # loop through main requests
+    giveAltCourses(p.alts, p)
 
-            for block in period:
-                if wantedCourse in block.courses:
-                    if block not in availableClasses:
-                        continue
+for p in people:
 
-                    #if the requested class is found and not at max capacity, add student
-                    if (len(block.studentList) < int(block.maxEnrollment) and len(p.timetable[currBlock]) == 0): 
-                        block.studentList.append(p)
-                        p.timetable[currBlock].append(block)
-                        blockFound = True
-                        
+    # loop through main requests
+    giveOutsideCourses(p.outsides, p)
 
-                        currBlock = currBlock + 1
-                        if(currBlock == 8):
-                            currBlock = 0
-                        break
+score = scoreTimetable(score)
 
-                    # remove the block from availableClasses if at max capacity
-                    else:
-                        availableClasses.remove(block)
-            if(blockFound):
-                break
-        
-        #if there is no course that the student wants in the schedule, make new course
-        if(not blockFound):
-            # print("creating new block")
-            tempBlockCourses = [wantedCourse]
-            for blocking in courseBlocking:
-                if wantedCourse in blocking:
-                    tempBlockCourses = blocking
-                    break
-            newBlock = Block(tempBlockCourses)
-            newBlock.studentList.append(p)
-            p.timetable[currBlock].append(newBlock)
-            globalTimetable[currBlock].append(newBlock)
-            availableClasses.append(newBlock)
-            currBlock = currBlock + 1
-            if(currBlock == 8):
-                     currBlock = 0
-
-# printGlobalTimetable()
-
-score = 0
-maxScore = 0
-
-# scoring the timetable
-for student in people:
-    for period in student.timetable:
-        maxScore = maxScore + 2
-
-        for block in period:
-            for course in student.courses:
-                if (course in block.courses):
-                    score = score + 2
-            for course in student.alts:
-                if (course in block.courses):
-                    score = score + 1           
-
-#printAllCourses()
 writeToCSV()
-print("Score: " + str(score))
-print("Max Score: " + str(maxScore))
-print("Percent: " + str(score / maxScore))
-print()
-printStudentTimetable(getStudent("1278"))
-printStudentTimetable(getStudent("1002"))
+
+for std in people:
+    printStudentTimetable(std)
+    fullTimetable = True
+    for course in std.courses:
+        maxReqCourseScore += 1
+        for period in std.timetable:
+            for block in period:
+                if(course not in block.courses):
+                    fullTimetable = False
+                else:
+                    reqCourseScore += 1
+        if(fullTimetable):
+            numReqTimetable += 1
+    
+    # fullTimetable = True
+    # for alt in std.alts:
+    #     for course in std.courses:
+    #         for period in std.timetable:
+    #             for block in period:
+    #                 if(course not in block.courses and alt not in block.courses):
+    #                     fullTimetable = False
+                    
+    #         if(fullTimetable):
+    #             numReqAltTimetable += 1
+
+    fullTimetable = True
+    for period in std.timetable:
+        for block in period:
+            for course in block.courses:
+                if (course not in std.courses and course not in std.alts):
+                    fullTimetable = False
+    if(fullTimetable):
+        numReqAltTimetable += 1            
+    
+    for alt in std.alts:
+        maxAltCourseScore += 1
+        for period in std.timetable:
+            for block in period:
+                if alt in block.courses:
+                    reqCourseScore += 1
+        
+
+print("1) " + str(score))
+print("2) " + str(reqCourseScore / maxReqCourseScore))
+print("3) " + str((reqCourseScore + altCourseScore) / (maxReqCourseScore + maxAltCourseScore)))
+print("4) " + str(numReqTimetable))
+print("5) " + str(numReqAltTimetable))
