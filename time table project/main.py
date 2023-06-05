@@ -7,6 +7,7 @@ class Person:
         self.id = id
         self.courses = courses
         self.alts = alts
+        self.altRequests = alts[:]
         self.outsides = outsides
         self.timetable = [[], [], [], [], [], [], [], [], []]
 
@@ -62,8 +63,6 @@ outsides = []
 id = 0
 first = True
 
-allBlocks = []
-
 ##stores sequecning
 sequencing = {}
 
@@ -113,7 +112,7 @@ def printGlobalTimetable(): #prints the classes in each block (without printing 
             print()
 
 # write globalTimetable to CSV
-def writeToCSV():
+def writeToCSV():  
 
     # writing to csv file
     with open("output.csv", 'w', newline="") as csvfile:
@@ -305,6 +304,7 @@ def giveAltCourses(altCourses, student):
                     block.studentList.append(student)
                     altCourses.remove(course)
                     foundCourse = True
+                    print("added to " + str(block))
                     break
                 
             if(foundCourse):
@@ -342,6 +342,7 @@ def giveAltCourses(altCourses, student):
         availableClasses.append(newBlock)
         altCourses.remove(altCourses[0])
         #availableBlocks.remove(availableBlocks[rand])
+        print("new alt course")
 
 def giveOutsideCourses(outsides, student):
     
@@ -446,15 +447,6 @@ with open('data/Course Blocking Rules.csv') as file:
                     
             courseBlocking.append(temp)
 
-for course in classes:
-    tempList = []
-    tempList.append(course)
-    tempBlock = Block(tempList)
-    allBlocks.append(tempBlock)
-    
-for course in courseBlocking:
-    tempBlock = Block(course)
-    allBlocks.append(tempBlock)
 
 # process sequencing run
 with open('data/Course Sequencing Rules.csv') as file:
@@ -473,7 +465,7 @@ with open('data/Course Sequencing Rules.csv') as file:
 
 currBlock = 0
 
-# random.shuffle(people)
+#random.shuffle(people)
 for p in people:
     currBlock = giveAvailableCourses(p.courses, p, currBlock)
     
@@ -492,50 +484,77 @@ score = scoreTimetable(score)
 
 writeToCSV()
 
+fullTimetableStudents = []
+fullAltTimetableStudents = []
+
 for std in people:
-    printStudentTimetable(std)
-    fullTimetable = True
+
+    # counting main requests and fulfilled main requests
     for course in std.courses:
         maxReqCourseScore += 1
         for period in std.timetable:
             for block in period:
-                if(course not in block.courses):
-                    fullTimetable = False
-                else:
+                if course in block.courses:
                     reqCourseScore += 1
-        if(fullTimetable):
-            numReqTimetable += 1
-    
-    # fullTimetable = True
-    # for alt in std.alts:
-    #     for course in std.courses:
-    #         for period in std.timetable:
-    #             for block in period:
-    #                 if(course not in block.courses and alt not in block.courses):
-    #                     fullTimetable = False
-                    
-    #         if(fullTimetable):
-    #             numReqAltTimetable += 1
 
+        
+    # counting students with 8/8 courses (requested only)
     fullTimetable = True
     for period in std.timetable:
+       # if (len(period) == 0):
+          #  fullTimetable = False
         for block in period:
+            isRequested = False
             for course in block.courses:
-                if (course not in std.courses and course not in std.alts):
-                    fullTimetable = False
+                if course in std.courses:
+                    isRequested = True
+            if not isRequested:
+                fullTimetable = False
+                break
+        if not fullTimetable:
+            break
     if(fullTimetable):
-        numReqAltTimetable += 1            
+        numReqTimetable += 1   
+        fullTimetableStudents.append(std)
+        #printStudentTimetable(std)  
     
-    for alt in std.alts:
+
+    # counting students with 8/8 courses (requested or alternate)
+    fullTimetable = True
+    for period in std.timetable:
+        #if (len(period) == 0):
+        #    fullTimetable = False
+        for block in period:
+            isRequested = False
+            for course in block.courses:
+                if ((course in std.courses) or (course in std.altRequests)):
+                    isRequested = True
+            if not isRequested:
+                fullTimetable = False
+                break
+        if not fullTimetable:
+            break
+    if(fullTimetable):
+        numReqAltTimetable += 1    
+        fullAltTimetableStudents.append(std)        
+    
+    # count number of alt requests and fulfilled alt requests
+    for alt in std.altRequests:
         maxAltCourseScore += 1
         for period in std.timetable:
             for block in period:
                 if alt in block.courses:
-                    reqCourseScore += 1
-        
-
+                    altCourseScore += 1
+    
 print("1) " + str(score))
 print("2) " + str(reqCourseScore / maxReqCourseScore))
 print("3) " + str((reqCourseScore + altCourseScore) / (maxReqCourseScore + maxAltCourseScore)))
-print("4) " + str(numReqTimetable))
-print("5) " + str(numReqAltTimetable))
+print("4) " + str(numReqTimetable / len(people)))
+print("5) " + str(numReqAltTimetable / len(people)))
+
+print()
+
+print("3 students with full requested timetables:")
+
+for i in range(3):
+    printStudentTimetable(fullTimetableStudents[i])
