@@ -6,6 +6,7 @@ class Person:
     def __init__ (self, id, courses, alts, outsides, linear):
         self.id = id
         self.courses = courses
+        self.mainRequests = courses[:]
         self.alts = alts
         self.altRequests = alts[:]
         self.outsides = outsides
@@ -164,6 +165,110 @@ def writeToCSV():
             csvwriter.writerow(["Outside", outsideCourses])
             csvwriter.writerow([])
 
+    with open("scores.csv", 'w', newline="") as csvfile:
+
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerow(["Scores"])
+
+        scores = []
+        scores.append(score)
+        scores.append(reqCourseScore / maxReqCourseScore)
+        scores.append((reqCourseScore + altCourseScore) / (maxReqCourseScore + maxAltCourseScore))
+        scores.append(numReqTimetable / len(people))
+        scores.append(numReqAltTimetable / len(people))
+
+        for i in range(5):
+            csvwriter.writerow([str(i), str(scores[i])])
+
+def giveSequences (personsRequests, student):
+    for request in personsRequests:
+
+        # checking if sequencing rule applies for this request
+        if request in sequencing.keys():
+        
+            for course in sequencing[request]:
+                if (course in personsRequests):
+                    
+                    # if they get the prerequisite course in first semester, try to give the next course
+                    if (giveCourse(request, [0, 1, 2, 3], student)):
+                        student.courses.remove(request)
+                        if (giveCourse(course, [4, 5, 6, 7], student)):
+                            student.courses.remove(course)
+                        break
+                    
+                    # try to give prerequisite in second semester
+                    if(giveCourse(request, [4, 5, 6, 7], student)):
+                        student.courses.remove(request)
+                
+                
+
+def giveCourse(request, periods, student):
+    random.shuffle(periods)
+    
+    # loop through periods
+    for period in periods:
+
+        # check if period is available (if the student does not already have a course in it)
+        if (len(student.timetable[period]) > 0):
+            continue
+
+        # loop through blocks in globalTimetable[currPeriod]
+        for block in globalTimetable[period]:
+            
+            # check if requested course is in this block
+            if (request not in block.courses):
+                continue
+                    
+            
+            # check if max enrolment reached (or remove from availableClasses)
+            if (block not in availableClasses):
+                continue
+
+            if (len(block.studentList) >= int(block.maxEnrollment)): 
+                availableClasses.remove(block)
+                continue
+            
+            # add student to block
+            student.timetable[period].append(block)
+            block.studentList.append(student)
+            return True
+
+    # loop through periods (and shuffle?)
+    random.shuffle(periods)
+    
+    for period in periods:
+        
+        # check if period is available and remove period if not?
+        if (len(student.timetable[period]) > 0):
+            periods.remove(period)
+            continue
+        
+        # create block
+        tempBlockCourses = [request]
+        for blocking in courseBlocking:
+            if request in blocking:
+                tempBlockCourses = blocking
+                break
+
+        # check if max sections reached
+        if tempBlockCourses[0].sections >= tempBlockCourses[0].maxSections:
+            continue
+
+        # update number of sections for each course in block
+        for course in tempBlockCourses:
+            course.sections = course.sections + 1
+
+        # create block
+        newBlock = Block(tempBlockCourses)
+
+        # add student to block, add block to globalTimetable
+        newBlock.studentList.append(student)
+        student.timetable[period].append(newBlock)
+        globalTimetable[period].append(newBlock)
+        availableClasses.append(newBlock)
+        return True
+    return False
+
 def drawLine(x):
     txt = ""
     for i in range(x):
@@ -274,10 +379,6 @@ def giveAvailableCourses(requestedCourses, student, currBlock):
                     if (len(block.studentList) + 1 <= int(block.maxEnrollment)): 
                         
                         block.studentList.append(student)
-                        # if block.courses[0].isLinear: # TODO: check if otherPeriod is available
-                        #     otherPeriod = currPeriod - 4 if currPeriod >= 4 else currPeriod + 4
-
-                            # student.timetable[otherPeriod].append(block)
                         student.timetable[currPeriod].append(block)
                         blockFound = True
                         break
@@ -349,6 +450,11 @@ def giveAltCourses(altCourses, student):
                 if (block not in availableClasses):
                     continue
 
+                # check if max enrolment reached
+                if (len(block.studentList) >= int(block.maxEnrollment)): 
+                    availableClasses.remove(block)
+                    continue
+
                 # check if wanted course found
                 if (course in block.courses):
                     student.timetable[period].append(block)
@@ -415,6 +521,13 @@ def giveLinearCourses(linearCourses, student):
                     student.timetable[altPeriod].append(block)
                     block.studentList.append(student)
                     linearCourses.remove(course)
+                    for lincourse in block.courses:
+                        if lincourse in student.courses:
+                            student.courses.remove(lincourse)
+                        elif lincourse in student.alts:
+                            student.alts.remove(lincourse)
+                        elif lincourse in linearCourses:
+                            linearCourses.remove(lincourse)
                     foundCourse = True
                     break
                 
@@ -442,6 +555,13 @@ def giveLinearCourses(linearCourses, student):
         # if max sections reached, break
         if tempBlockCourses[0].sections >= tempBlockCourses[0].maxSections:
             linearCourses.remove(linearCourses[0])
+            for lincourse in tempBlockCourses:
+                if lincourse in student.courses:
+                    student.courses.remove(lincourse)
+                elif lincourse in student.alts:
+                    student.alts.remove(lincourse)                        
+                elif lincourse in linearCourses:
+                        linearCourses.remove(lincourse)
             continue
 
         # update number of sections for each course in block
@@ -458,7 +578,14 @@ def giveLinearCourses(linearCourses, student):
 
         availableClasses.append(newBlock)
         linearCourses.remove(linearCourses[0])
-
+        for lincourse in tempBlockCourses:
+            if lincourse in student.courses:
+                student.courses.remove(lincourse)
+            elif lincourse in student.alts:
+                student.alts.remove(lincourse)
+            elif lincourse in linearCourses:
+                linearCourses.remove(lincourse)
+                                        
 # give outside of timetable courses to students
 def giveOutsideCourses(outsides, student):
     for wantedCourse in outsides:
@@ -584,28 +711,26 @@ currBlock = 0
 
 random.shuffle(people)
 
+
+
 for p in people:
     giveLinearCourses(p.linear, p)
-    # giveAltCourses(p.courses, p)
 
+for p in people:
+    giveSequences(p.courses, p)
 
 for p in people:
     currBlock = giveAvailableCourses(p.courses, p, currBlock)
-    # giveAltCourses(p.courses, p)
 
 for p in people:
-
-    # loop through main requests
     giveAltCourses(p.alts, p)
 
 for p in people:
-
-    # loop through main requests
     giveOutsideCourses(p.outsides, p)
 
 score = scoreTimetable(score)
 
-writeToCSV()
+
 
 fullTimetableStudents = []
 fullAltTimetableStudents = []
@@ -668,6 +793,14 @@ for std in people:
                 if alt in block.courses:
                     altCourseScore += 1
 
+
+# read previous scores, if current are higher, save current results
+with open('scores.csv') as file:
+    csv_reader = csv.reader(file)
+    for row in csv_reader:
+        if (row[0] == "3" and float(row[1]) < numReqTimetable/len(people)):
+            writeToCSV()
+
 print("students with full requested timetables:")
 for i in range(len(fullTimetableStudents)):
     printStudentTimetable(fullTimetableStudents[i])
@@ -682,3 +815,5 @@ print("5) " + str(numReqAltTimetable / len(people)))
 print()
 
 print(linear_courses)
+
+
