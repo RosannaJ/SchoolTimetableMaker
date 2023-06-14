@@ -632,7 +632,57 @@ for x in range(1):
                 student.timetable[8].append(newBlock)
                 globalTimetable[8].append(newBlock)
                 availableClasses.append(newBlock)
+    # sorts list of students by number of fulfilled requests, then by ID
+    def sortStudents(students):
+        sorted = []
 
+        # get lists of students with each amount of fulfilled requests
+        fulfilled = sortStudentsByFulfilled(students)
+        # print(fulfilled)
+
+        for x in range(len(fulfilled)):
+            print(len(fulfilled[x]))
+
+        # within each list, sort students by ID
+        for x in range(len(fulfilled)):
+            if len(fulfilled[x]) == 0:
+                continue
+            fulfilled[x] = sortStudentsByID(fulfilled[x])
+            return
+
+        # append each list to master list and return
+        for x in reversed(range(len(fulfilled))):
+            sorted += fulfilled[x]
+
+        return sorted
+
+    # sorts list of students by ID
+    def sortStudentsByID(students):
+        students.sort(key=lambda student: int(student.id))
+        return students
+
+    # returns a list of 9 lists of students (0 - 8 fulfilled requests)
+    def sortStudentsByFulfilled(students):
+        fulfilled = [[],[],[],[],[],[],[],[],[]]
+
+        # loop through students
+        for student in students:
+            # print(student.id + "'s fulfilled requests: ", end="")
+            fulfilledRequests = 0
+            
+            # loop through each period
+            for period in student.timetable[0:8]:
+
+                # check if block is not empty
+                if (len(period) > 0):
+                    fulfilledRequests += 1
+
+            # print(fulfilledRequests)
+            # print()
+            fulfilled[fulfilledRequests].append(student)
+
+        
+        return fulfilled
     #Main
 
     #Fills the classes array with each class
