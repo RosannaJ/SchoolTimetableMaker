@@ -12,6 +12,7 @@ class Person:
         self.outsides = outsides
         self.linear = linear
         self.timetable = [[], [], [], [], [], [], [], [], []]
+        self.grade = 0
 
     def __str__(self):
         return f'\n{self.id}'
@@ -56,7 +57,7 @@ class Block:
             txt += course.name + ", "
         return txt
         
-for x in range(1000):
+for x in range(1):
     if x % 100 == 0:
         print(str(x))
 
@@ -92,7 +93,7 @@ for x in range(1000):
         'MGRPR11--L', 'MGMT-12L--', 'YED--1EX-L', 'MWEX-2A--L', 'MCMCC11--L', 'MWEX-2B--L',
         'MIMJB11--L', 'MMUOR11S-L', 'MDNC-12--L', 'YCPA-2AX-L', 'MDNCM12--L', 'YCPA-2AXE-',
         'MGRPR12--L', 'MGMT-12L--', 'YED--2DX-L', 'YED--2FX-L', 'MCMCC12--L', 'MWEX-2A--L',
-        'MIMJB12--L', 'MWEX-2B--L', 'MMUOR12S-'
+        'MIMJB12--L', 'MWEX-2B--L', 'MMUOR12S-', ''
     ]
 
     linear_courses = []
@@ -671,6 +672,7 @@ for x in range(1000):
                 linear = []
                 people.append(person)
                 
+                
             elif getCourse(row[0]).outsideTimetable:
                 outsides.append(getCourse(row[0]))
             elif getCourse(row[0]).isLinear:
@@ -738,7 +740,12 @@ for x in range(1000):
     fullTimetableStudents = []
     fullAltTimetableStudents = []
 
+    spares = [0]*9
+    requestsFulfilled = [0]*9
+
     for std in people:
+        numCourses = 0
+        mainFulfilled = 0
 
         # counting main requests and fulfilled main requests
         for course in std.courses:
@@ -747,6 +754,7 @@ for x in range(1000):
                 for block in std.timetable[i]:
                     if course in block.courses:
                         reqCourseScore += 1
+                        break
 
         # counting students with 8/8 courses (requested only)
         fullTimetable = True
@@ -796,7 +804,34 @@ for x in range(1000):
                     if alt in block.courses:
                         altCourseScore += 1
 
+        # counting num of spares
+        numSpares = 0
+        for period in std.timetable[0:8]:
+            if (len(period) == 0):
+                numSpares += 1
+                continue
+            for course in period[0].courses:
+                if course in std.mainRequests:
+                    mainFulfilled += 1
+                    break
+                
+        spares[numSpares] += 1
+        requestsFulfilled[mainFulfilled] += 1
 
+    print("With Alt:")
+    print("8/8 " + str(spares[0] / len(people)))
+    print("7/8 " + str(spares[1] / len(people)))
+    print("6/8 " + str(spares[2] / len(people)))
+    print("sum " + str((spares[0] + spares[1] + spares[2]) / len(people)))
+
+    print("No Alt:")
+    print("8/8 " + str(requestsFulfilled[8]) / len(people))
+    print("7/8 " + str(requestsFulfilled[7]) / len(people))
+    print("6/8 " + str(requestsFulfilled[6]) / len(people))
+    print("sum " + str((requestsFulfilled[6] + requestsFulfilled[7] + requestsFulfilled[8]) / len(people)))
+
+    print("students with 0-5/8 courses (alt or requested):" + str())
+    
     # read previous scores, if current are higher, save current results
     with open('scores.csv') as file:
         csv_reader = csv.reader(file)
@@ -805,17 +840,6 @@ for x in range(1000):
                 writeToCSV()
                 print(str(x) + ": " + str(numReqTimetable/len(people)))
                 break
-
-    # print("students with full requested timetables:")
-    # for i in range(len(fullTimetableStudents)):
-    #     printStudentTimetable(fullTimetableStudents[i])
-    # print(len(fullTimetableStudents))
-
-    # print("1) " + str(score))
-    # print("2) " + str(reqCourseScore / maxReqCourseScore))
-    # print("3) " + str((reqCourseScore + altCourseScore) / (maxReqCourseScore + maxAltCourseScore)))
-    # print("4) " + str(numReqTimetable / len(people)))
-    # print("5) " + str(numReqAltTimetable / len(people)))
 
 print("Done")
 
