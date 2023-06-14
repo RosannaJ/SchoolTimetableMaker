@@ -825,12 +825,12 @@ for x in range(1):
     print("sum " + str((spares[0] + spares[1] + spares[2]) / len(people)))
 
     print("No Alt:")
-    print("8/8 " + str(requestsFulfilled[8]) / len(people))
-    print("7/8 " + str(requestsFulfilled[7]) / len(people))
-    print("6/8 " + str(requestsFulfilled[6]) / len(people))
+    print("8/8 " + str(requestsFulfilled[8] / len(people)))
+    print("7/8 " + str(requestsFulfilled[7] / len(people)))
+    print("6/8 " + str(requestsFulfilled[6] / len(people)))
     print("sum " + str((requestsFulfilled[6] + requestsFulfilled[7] + requestsFulfilled[8]) / len(people)))
 
-    print("students with 0-5/8 courses (alt or requested):" + str())
+    print("students with 0-5/8 courses (alt or requested):" + str(1 - (spares[0] + spares[1] + spares[2]) / len(people)))
     
     # read previous scores, if current are higher, save current results
     with open('scores.csv') as file:
