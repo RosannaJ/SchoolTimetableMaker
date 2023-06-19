@@ -12,7 +12,7 @@ class Person:
         self.outsides = outsides
         self.linear = linear
         self.timetable = [[], [], [], [], [], [], [], [], []]
-        self.grade = 0
+
 
     def __str__(self):
         return f'\n{self.id}'
@@ -85,6 +85,14 @@ for x in range(1):
     numReqTimetable = 0         # students with 8/8 requested courses
     numReqAltTimetable = 0      # students with 8/8 requested or alt courses
 
+    # new metrics
+    allMain = []
+    oneLessMain = []
+    twoLessMain = []
+
+    allWithAlt = []
+    oneLessWithAlt = []
+    twoLessWithAlt = []
 
     outside_the_timetable = [
         'XC---09--L', 'MDNC-09C-L', 'MDNC-09M-L', 'XBA--09J-L', 'XLDCB09S-L', 'YCPA-0AX-L',
@@ -103,6 +111,7 @@ for x in range(1):
         for course in classes:
             if(course.classID == courseID):
                 return course
+        return False
 
     def printGlobalTimetable(): #prints the classes in each block (without printing students)
         x = 0
@@ -122,7 +131,7 @@ for x in range(1):
                 print()
 
     # write globalTimetable to CSV
-    def writeToCSV():  
+    def writeToCSV(): 
 
         # writing to csv file
         with open("output.csv", 'w', newline="") as csvfile:
@@ -173,16 +182,9 @@ for x in range(1):
 
             csvwriter = csv.writer(csvfile)
             csvwriter.writerow(["Scores"])
-
-            scores = []
-            scores.append(score)
-            scores.append(reqCourseScore / maxReqCourseScore)
-            scores.append((reqCourseScore + altCourseScore) / (maxReqCourseScore + maxAltCourseScore))
-            scores.append(numReqTimetable / len(people))
-            scores.append(numReqAltTimetable / len(people))
-
-            for i in range(5):
-                csvwriter.writerow([str(i), str(scores[i])])
+            csvwriter.writerow([str(len(allMain) / len(people) + len(oneLessMain) / len(people) + len(twoLessMain) / len(people))])
+            csvwriter.writerow([str(len(allWithAlt) / len(people) + len(oneLessWithAlt) / len(people) + len(twoLessWithAlt) / len(people))])
+            
 
     def giveSequences (personsRequests, student):
         for request in personsRequests:
@@ -204,8 +206,6 @@ for x in range(1):
                         if(giveCourse(request, [4, 5, 6, 7], student)):
                             student.courses.remove(request)
                     
-                    
-
     def giveCourse(request, periods, student):
         # random.shuffle(periods)
         
@@ -324,6 +324,21 @@ for x in range(1):
                 student = person
         return student
 
+    def getLeastBlocks():
+        lengths = []
+        x = 0
+        
+
+        while(len(lengths) < 8):
+            
+            for i in range(8):
+                if len(globalTimetable[i]) == x:
+                    lengths.append(i)
+
+            x = x + 1
+        return lengths
+        # sort
+
     def printStudentTimetable(student):
         print("Student " + str(student.id) + "'s Timetable:")
         for i in range(8):
@@ -396,11 +411,11 @@ for x in range(1):
             #if there is no course that the student wants in the schedule, make new course
             if(not blockFound):
 
-                for i in range(8):
-                    if len(student.timetable[currBlock]) > 0:
-                        currBlock = currBlock + 1      
-                        if(currBlock == 8):
-                            currBlock = 0
+                for blockWithLowestCourses in getLeastBlocks():
+                    if len(student.timetable[blockWithLowestCourses]) > 0:
+                        # currBlock = currBlock + 1      
+                        # if(currBlock == 8):
+                        #     currBlock = 0
                         continue
 
                     tempBlockCourses = [wantedCourse]
@@ -422,12 +437,12 @@ for x in range(1):
 
                     newBlock = Block(tempBlockCourses)
                     newBlock.studentList.append(student)
-                    student.timetable[currBlock].append(newBlock)
-                    globalTimetable[currBlock].append(newBlock)
+                    student.timetable[blockWithLowestCourses].append(newBlock)
+                    globalTimetable[blockWithLowestCourses].append(newBlock)
                     availableClasses.append(newBlock)
-                    currBlock = currBlock + 1      
-                    if(currBlock == 8):
-                        currBlock = 0
+                    # currBlock = currBlock + 1      
+                    # if(currBlock == 8):
+                    #     currBlock = 0
                     break
 
                     # if tempBlockCourses[0].isLinear:
@@ -634,25 +649,18 @@ for x in range(1):
                 availableClasses.append(newBlock)
     # sorts list of students by number of fulfilled requests, then by ID
     def sortStudents(students):
+        temp = []
         sorted = []
 
-        # get lists of students with each amount of fulfilled requests
-        fulfilled = sortStudentsByFulfilled(students)
-        # print(fulfilled)
+        # sort students by id
+        sortStudentsByID(students)
 
-        for x in range(len(fulfilled)):
-            print(len(fulfilled[x]))
+        # create separate list for each amount of fulfilled course requests
+        temp = sortStudentsByFulfilled(students)
 
-        # within each list, sort students by ID
-        for x in range(len(fulfilled)):
-            if len(fulfilled[x]) == 0:
-                continue
-            fulfilled[x] = sortStudentsByID(fulfilled[x])
-            return
-
-        # append each list to master list and return
-        for x in reversed(range(len(fulfilled))):
-            sorted += fulfilled[x]
+        # append lists together
+        for x in reversed(range(len(temp))):
+            sorted += temp[x]
 
         return sorted
 
@@ -701,6 +709,20 @@ for x in range(1):
     for course in classes:
         if course.classID in outside_the_timetable:
             course.outsideTimetable = True
+
+    with open('data/Updated Course Information.csv') as file:
+        csv_reader = csv.reader(file)
+        for row in csv_reader:
+            if (row[0] == "" and row [1] != "Number" and row[1] != ""):
+                if not getCourse(row[1]):
+                    # print(row[1] + " doesn't exist")
+                    continue
+                
+                if (getCourse(row[1]).maxSections != int(float(row[13]))):
+                    getCourse(row[1]).maxSections = int(float(row[13]))
+                    # print(row[1] + " changed")
+        
+
         
     #Fills the people array with student objects containing course requests
     with open('data/requests.csv') as csv_file:
@@ -721,8 +743,8 @@ for x in range(1):
                 outsides = []
                 linear = []
                 people.append(person)
-                
-                
+            elif not getCourse(row[0]):
+                continue  
             elif getCourse(row[0]).outsideTimetable:
                 outsides.append(getCourse(row[0]))
             elif getCourse(row[0]).isLinear:
@@ -766,8 +788,6 @@ for x in range(1):
 
     random.shuffle(people)
 
-
-
     for p in people:
         giveLinearCourses(p.linear, p)
 
@@ -784,8 +804,6 @@ for x in range(1):
         giveOutsideCourses(p.outsides, p)
 
     score = scoreTimetable(score)
-
-
 
     fullTimetableStudents = []
     fullAltTimetableStudents = []
@@ -815,7 +833,7 @@ for x in range(1):
             for block in period:
                 isRequested = False
                 for course in block.courses:
-                    if course in std.courses:
+                    if course in std.courses or course in std.linear:
                         isRequested = True
                 if not isRequested:
                     fullTimetable = False
@@ -835,7 +853,8 @@ for x in range(1):
             for block in period:
                 isRequested = False
                 for course in block.courses:
-                    if ((course in std.courses) or (course in std.altRequests)):
+                    if ((course in std.courses) or std.linear or
+                         (course in std.altRequests)):
                         isRequested = True
                 if not isRequested:
                     fullTimetable = False
@@ -861,35 +880,77 @@ for x in range(1):
                 numSpares += 1
                 continue
             for course in period[0].courses:
-                if course in std.mainRequests:
+                if course in std.mainRequests or course in std.linear:
                     mainFulfilled += 1
                     break
                 
         spares[numSpares] += 1
         requestsFulfilled[mainFulfilled] += 1
-
-    print("With Alt:")
-    print("8/8 " + str(spares[0] / len(people)))
-    print("7/8 " + str(spares[1] / len(people)))
-    print("6/8 " + str(spares[2] / len(people)))
-    print("sum " + str((spares[0] + spares[1] + spares[2]) / len(people)))
-
-    print("No Alt:")
-    print("8/8 " + str(requestsFulfilled[8] / len(people)))
-    print("7/8 " + str(requestsFulfilled[7] / len(people)))
-    print("6/8 " + str(requestsFulfilled[6] / len(people)))
-    print("sum " + str((requestsFulfilled[6] + requestsFulfilled[7] + requestsFulfilled[8]) / len(people)))
-
-    print("students with 0-5/8 courses (alt or requested):" + str(1 - (spares[0] + spares[1] + spares[2]) / len(people)))
     
-    # read previous scores, if current are higher, save current results
-    with open('scores.csv') as file:
-        csv_reader = csv.reader(file)
-        for row in csv_reader:
-            if (row[0] == "3" and float(row[1]) < numReqTimetable/len(people)):
-                writeToCSV()
-                print(str(x) + ": " + str(numReqTimetable/len(people)))
-                break
+    # sort Students
+    people = sortStudents(people)
+
+    # calculate and print new metrics
+
+    for std in people:
+        mainFulfilled = 0
+        fulfilledCourses = 0
+
+        # count number of main requests
+        numMainRequests = len(std.mainRequests)
+        # count alt requests (?)
+        numAltRequests = len(std.altRequests)
+
+
+        # loop through periods of timetable
+        for period in std.timetable[0:8]:
+            if len(period) == 0:
+                continue
+
+            fulfilledCourses += 1
+            # loop through courses in this block
+            for course in period[0].courses:
+                # check if fulfills main or alt request
+                if course in std.mainRequests:
+                    mainFulfilled += 1
+                    break
+
+
+        # add student to list of fulfillsAll, oneLess, twoLess
+        if mainFulfilled == numMainRequests:
+            allMain.append(std)
+        elif mainFulfilled == numMainRequests - 1:
+            oneLessMain.append(std)
+        elif mainFulfilled == numMainRequests - 2:
+            twoLessMain.append(std)
+
+        total = numMainRequests + numAltRequests
+        if (total > 8):
+            total = 8
+        
+        if fulfilledCourses == total:
+            allWithAlt.append(std)
+        elif fulfilledCourses == total - 1:
+            oneLessWithAlt.append(std)
+        elif fulfilledCourses == total - 2:
+            twoLessWithAlt.append(std)
+
+
+    print("main requests fulfilled: " + str(reqCourseScore / maxReqCourseScore))
+    print("main/alt requests fulfilled: " + str((reqCourseScore + altCourseScore) / (maxReqCourseScore + maxAltCourseScore)))
+    print()
+    print("All main requests fulfilled: " + str(len(allMain) / len(people)))
+    print("One main request not fulfilled: " + str(len(oneLessMain) / len(people)))
+    print("Two main requests not fulfilled: " + str(len(twoLessMain) / len(people)))
+    print("Sum: " + str(len(allMain) / len(people) + len(oneLessMain) / len(people) + len(twoLessMain) / len(people)))
+    print()
+    print("All main or alt requests fulfilled: " + str(len(allWithAlt) / len(people)))
+    print("One main or alt request not fulfilled: " + str(len(oneLessWithAlt) / len(people)))
+    print("Two main or alt requests not fulfilled: " + str(len(twoLessWithAlt) / len(people)))
+    print("Sum: " + str(len(allWithAlt) / len(people) + len(oneLessWithAlt) / len(people) + len(twoLessWithAlt) / len(people)))
+    print()
+    print("Students with 3-8 not fulfilled (main and alt): " + str((len(people) - len(allWithAlt) - len(oneLessWithAlt) - len(twoLessWithAlt)) / len(people)))
 
 print("Done")
+writeToCSV()
 
