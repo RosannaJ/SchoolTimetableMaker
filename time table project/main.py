@@ -57,7 +57,7 @@ class Block:
             txt += course.name + ", "
         return txt
         
-for x in range(1):
+for x in range(1000):
     if x % 100 == 0:
         print(str(x))
 
@@ -93,6 +93,9 @@ for x in range(1):
     allWithAlt = []
     oneLessWithAlt = []
     twoLessWithAlt = []
+
+    score1 = 0
+    score2 = 0
 
     outside_the_timetable = [
         'XC---09--L', 'MDNC-09C-L', 'MDNC-09M-L', 'XBA--09J-L', 'XLDCB09S-L', 'YCPA-0AX-L',
@@ -181,11 +184,22 @@ for x in range(1):
         with open("scores.csv", 'w', newline="") as csvfile:
 
             csvwriter = csv.writer(csvfile)
-            csvwriter.writerow(["Scores"])
-            csvwriter.writerow([str(len(allMain) / len(people) + len(oneLessMain) / len(people) + len(twoLessMain) / len(people))])
-            csvwriter.writerow([str(len(allWithAlt) / len(people) + len(oneLessWithAlt) / len(people) + len(twoLessWithAlt) / len(people))])
-            
 
+            csvwriter.writerow(["main requests fulfilled", str(reqCourseScore / maxReqCourseScore)])
+            csvwriter.writerow(["main/alt requests fulfilled", str((reqCourseScore + altCourseScore) / (maxReqCourseScore + maxAltCourseScore))])
+            csvwriter.writerow([])
+            csvwriter.writerow(["All main requests fulfilled", str(len(allMain) / len(people))])
+            csvwriter.writerow(["One main request not fulfilled", str(len(oneLessMain) / len(people))])
+            csvwriter.writerow(["Two main requests not fulfilled", str(len(twoLessMain) / len(people))])
+            csvwriter.writerow(["Sum", str(score1)])
+            csvwriter.writerow([])
+            csvwriter.writerow(["All main or alt requests fulfilled", str(len(allWithAlt) / len(people))])
+            csvwriter.writerow(["One main or alt request not fulfilled", str(len(oneLessWithAlt) / len(people))])
+            csvwriter.writerow(["Two main or alt requests not fulfilled", str(len(twoLessWithAlt) / len(people))])
+            csvwriter.writerow(["Sum", str(score2)])
+            csvwriter.writerow([])
+            csvwriter.writerow(["Students with 3-8 not fulfilled (main and alt)", str((len(people) - len(allWithAlt) - len(oneLessWithAlt) - len(twoLessWithAlt)) / len(people))])
+            
     def giveSequences (personsRequests, student):
         for request in personsRequests:
 
@@ -337,7 +351,6 @@ for x in range(1):
 
             x = x + 1
         return lengths
-        # sort
 
     def printStudentTimetable(student):
         print("Student " + str(student.id) + "'s Timetable:")
@@ -374,6 +387,15 @@ for x in range(1):
                 maxIndex = i
                 max = len(globalTimetable[i])
         return maxIndex
+    
+    def getShortestBlock():
+        min = 0
+        minIndex = 0
+        for i in range(len(globalTimetable)):
+            if len(globalTimetable[i]) < min:
+                minIndex = i
+                min = len(globalTimetable[i])
+        return minIndex
 
     # gives the student their main requests if available
     def giveAvailableCourses(requestedCourses, student, currBlock):     
@@ -721,9 +743,7 @@ for x in range(1):
                 if (getCourse(row[1]).maxSections != int(float(row[13]))):
                     getCourse(row[1]).maxSections = int(float(row[13]))
                     # print(row[1] + " changed")
-        
-
-        
+         
     #Fills the people array with student objects containing course requests
     with open('data/requests.csv') as csv_file:
         csv_reader = csv.reader(csv_file)
@@ -935,22 +955,51 @@ for x in range(1):
         elif fulfilledCourses == total - 2:
             twoLessWithAlt.append(std)
 
+    score1 = len(allMain) / len(people) + len(oneLessMain) / len(people) + len(twoLessMain) / len(people)
+    score2 = len(allWithAlt) / len(people) + len(oneLessWithAlt) / len(people) + len(twoLessWithAlt) / len(people)
 
-    print("main requests fulfilled: " + str(reqCourseScore / maxReqCourseScore))
-    print("main/alt requests fulfilled: " + str((reqCourseScore + altCourseScore) / (maxReqCourseScore + maxAltCourseScore)))
-    print()
-    print("All main requests fulfilled: " + str(len(allMain) / len(people)))
-    print("One main request not fulfilled: " + str(len(oneLessMain) / len(people)))
-    print("Two main requests not fulfilled: " + str(len(twoLessMain) / len(people)))
-    print("Sum: " + str(len(allMain) / len(people) + len(oneLessMain) / len(people) + len(twoLessMain) / len(people)))
-    print()
-    print("All main or alt requests fulfilled: " + str(len(allWithAlt) / len(people)))
-    print("One main or alt request not fulfilled: " + str(len(oneLessWithAlt) / len(people)))
-    print("Two main or alt requests not fulfilled: " + str(len(twoLessWithAlt) / len(people)))
-    print("Sum: " + str(len(allWithAlt) / len(people) + len(oneLessWithAlt) / len(people) + len(twoLessWithAlt) / len(people)))
-    print()
-    print("Students with 3-8 not fulfilled (main and alt): " + str((len(people) - len(allWithAlt) - len(oneLessWithAlt) - len(twoLessWithAlt)) / len(people)))
+    # print("main requests fulfilled: " + str(reqCourseScore / maxReqCourseScore))
+    # print("main/alt requests fulfilled: " + str((reqCourseScore + altCourseScore) / (maxReqCourseScore + maxAltCourseScore)))
+    # print()
+    # print("All main requests fulfilled: " + str(len(allMain) / len(people)))
+    # print("One main request not fulfilled: " + str(len(oneLessMain) / len(people)))
+    # print("Two main requests not fulfilled: " + str(len(twoLessMain) / len(people)))
+    # print("Sum: " + str(score1))
+    # print()
+    # print("All main or alt requests fulfilled: " + str(len(allWithAlt) / len(people)))
+    # print("One main or alt request not fulfilled: " + str(len(oneLessWithAlt) / len(people)))
+    # print("Two main or alt requests not fulfilled: " + str(len(twoLessWithAlt) / len(people)))
+    # print("Sum: " + str(score2))
+    # print()
+    # print("Students with 3-8 not fulfilled (main and alt): " + str((len(people) - len(allWithAlt) - len(oneLessWithAlt) - len(twoLessWithAlt)) / len(people)))
+
+    # read previous scores, if current are higher, save current results
+    with open('scores.csv') as file:
+        csv_reader = csv.reader(file)
+        sum = 0
+
+        for row in csv_reader:
+            if (len(row) == 0):
+                continue
+            if (row[0] == "Sum"):
+                sum += float(row[1])
+
+        if (sum < score1 + score2) and (getFullestBlock() - getShortestBlock() <= 3):
+            writeToCSV()
+            print("main requests fulfilled: " + str(reqCourseScore / maxReqCourseScore))
+            print("main/alt requests fulfilled: " + str((reqCourseScore + altCourseScore) / (maxReqCourseScore + maxAltCourseScore)))
+            print()
+            print("All main requests fulfilled: " + str(len(allMain) / len(people)))
+            print("One main request not fulfilled: " + str(len(oneLessMain) / len(people)))
+            print("Two main requests not fulfilled: " + str(len(twoLessMain) / len(people)))
+            print("Sum: " + str(score1))
+            print()
+            print("All main or alt requests fulfilled: " + str(len(allWithAlt) / len(people)))
+            print("One main or alt request not fulfilled: " + str(len(oneLessWithAlt) / len(people)))
+            print("Two main or alt requests not fulfilled: " + str(len(twoLessWithAlt) / len(people)))
+            print("Sum: " + str(score2))
+            print()
+            print("Students with 3-8 not fulfilled (main and alt): " + str((len(people) - len(allWithAlt) - len(oneLessWithAlt) - len(twoLessWithAlt)) / len(people)))
+            print("---saved---")
 
 print("Done")
-writeToCSV()
-
