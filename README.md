@@ -19,7 +19,7 @@ Only accessible to those a part of Swifty Summer
 The following code determines how smart you are using ChatGPT 6.5
 ```python
 import League of Legends
-import GreasyNicky
+import Nicky
 
 gpa = 100
 courses = ['AP Physics C Mechanics', 'AP Calculus AB', 'Food Studies 12']
