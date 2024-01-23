@@ -2,9 +2,9 @@
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/jhlywa/chess.js/node.js.yml)
 ![npm](https://img.shields.io/npm/v/chess.js?color=blue)
 ![npm](https://img.shields.io/npm/dm/chess.js)
-![t1](https://pbs.twimg.com/media/ELO6--zVAAA3woI.jpg)
 
 SchoolTimetableMaker is a Python application used for generating schoolwide timetables.
+![t1](https://pbs.twimg.com/media/ELO6--zVAAA3woI.jpg)
 
 ## Installation
 Run the command in the command line to install the most recent version of SchoolTimetableMaker:
